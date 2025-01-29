@@ -1,0 +1,75 @@
+{
+  "name": "crypto-blackjack",
+  "version": "1.0.0",
+  "description": "Real-time multiplayer blackjack game with cryptocurrency integration",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "nodemon server/app.js",
+    "test": "jest",
+    "lint": "eslint .",
+    "setup-db": "node server/scripts/setupDatabase.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0",
+    "mysql2": "^3.9.1",
+    "dotenv": "^16.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.5",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3",
+    "jest": "^29.7.0",
+    "eslint": "^8.56.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "supertest": "^6.3.4"
+  },
+  "keywords": [
+    "blackjack",
+    "websocket",
+    "crypto",
+    "game",
+    "multiplayer"
+  ],
+  "author": "11oclocktoast",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/crypto-blackjack.git"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "./coverage",
+    "collectCoverageFrom": [
+      "server/**/*.js",
+      "!server/scripts/**"
+    ]
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "public/*",
+      "coverage/*",
+      "node_modules/*"
+    ],
+    "delay": "2500"
+  },
+  "eslintConfig": {
+    "extends": "airbnb-base",
+    "env": {
+      "node": true,
+      "jest": true
+    },
+    "rules": {
+      "no-console": "off"
+    }
+  }
+}

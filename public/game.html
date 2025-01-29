@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blackjack</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        #game-table {
+            background-color: #267f00;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .hand {
+            position: absolute;
+            padding: 20px;
+            border-radius: 50%;
+            width: 200px;
+            text-align: center;
+        }
+
+        #dealer {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .player {
+            bottom: 100px;
+        }
+
+        #player1 { left: 75%; }
+        #player2 { left: 50%; transform: translateX(-50%); }
+        #player3 { left: 25%; }
+
+        .card {
+            display: inline-block;
+            background-color: white;
+            color: black;
+            width: 60px;
+            height: 90px;
+            margin: 2px;
+            border-radius: 5px;
+            line-height: 90px;
+            text-align: center;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #chips {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+        }
+
+        .chip {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            display: inline-block;
+            margin: 5px;
+            color: white;
+            line-height: 60px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .chip-1 { background-color: #ff4444; }
+        .chip-5 { background-color: #4444ff; }
+        .chip-25 { background-color: #44ff44; }
+        .chip-100 { background-color: #000000; }
+
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.5);
+            border-radius: 5px;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+</head>
+<body>
+    <div class="status">
+        Balance: $<span id="balance">1000</span>
+    </div>
+
+    <div id="game-table">
+        <div id="dealer" class="hand">
+            <div class="player-name">Dealer</div>
+            <div class="cards"></div>
+        </div>
+
+        <div id="player1" class="hand player">
+            <div class="player-name">Player 1</div>
+            <div class="cards"></div>
+            <div class="bet">Bet: $<span>0</span></div>
+        </div>
+
+        <div id="player2" class="hand player">
+            <div class="player-name">Player 2</div>
+            <div class="cards"></div>
+            <div class="bet">Bet: $<span>0</span></div>
+        </div>
+
+        <div id="player3" class="hand player">
+            <div class="player-name">Player 3</div>
+            <div class="cards"></div>
+            <div class="bet">Bet: $<span>0</span></div>
+        </div>
+
+        <div class="controls">
+            <button id="hit" disabled>Hit</button>
+            <button id="stand" disabled>Stand</button>
+            <button id="double" disabled>Double</button>
+            <button id="split" disabled>Split</button>
+        </div>
+
+        <div id="chips">
+            <div class="chip chip-1">$1</div>
+            <div class="chip chip-5">$5</div>
+            <div class="chip chip-25">$25</div>
+            <div class="chip chip-100">$100</div>
+        </div>
+    </div>
+    
+    <script>
+        // Check if we have a token
+        const token = localStorage.getItem('jwt_token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        let gameWorker;
+
+        function initGame() {
+            console.log('Initializing game...');
+            const token = localStorage.getItem('jwt_token');
+            
+            if (!token) {
+                console.error('No token found, redirecting to login');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            console.log('Token found, creating worker');
+            gameWorker = new Worker('gameWorker.js');
+            
+            gameWorker.onmessage = function(e) {
+                const message = e.data;
+                console.log('Received message from worker:', message);
+                
+                switch(message.type) {
+                    case 'connection_status':
+                        console.log('Connection status update:', message.status);
+                        handleConnectionStatus(message.status);
+                        break;
+                    case 'state_update':
+                        console.log('State update received:', message.data);
+                        handleStateUpdate(message.data);
+                        break;
+                    case 'error':
+                        console.error('Error from worker:', message.error);
+                        handleError(message.error);
+                        break;
+                }
+            };
+
+            // Initialize worker with base URL and token
+            console.log('Initializing worker with baseUrl:', location.hostname);
+            gameWorker.postMessage({ 
+                type: 'init', 
+                baseUrl: location.hostname,
+                token: token
+            });
+            
+            // Connect after initialization
+            setTimeout(() => {
+                gameWorker.postMessage({ type: 'connect' });
+            }, 100);
+        }
+
+        function handleConnectionStatus(status) {
+            console.log('Connection status:', status);
+            if (status === 'connected') {
+                // Auto-join a table
+                setTimeout(()=>{ gameWorker.postMessage({ type: 'join_table' }); }, 100);
+            }
+        }
+
+        function handleStateUpdate(state) {
+            console.log('Game state:', state);
+            updateUI(state);
+        }
+
+        function handleError(error) {
+            console.error('Game error:', error);
+            Toastify({
+                text: error,
+                duration: 3000
+            }).showToast();
+        }
+
+        function updateUI(state) {
+            // Update dealer cards
+            const dealerCards = document.querySelector('#dealer .cards');
+            dealerCards.innerHTML = '';
+            state.dealer.cards.forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+                cardEl.textContent = card.hidden ? '??' : `${card.value}${card.suit}`;
+                dealerCards.appendChild(cardEl);
+            });
+
+            // Update player cards and bets
+            state.players.forEach(player => {
+                const playerEl = document.getElementById(`player${player.id}`);
+                if (playerEl) {
+                    const cardsEl = playerEl.querySelector('.cards');
+                    cardsEl.innerHTML = '';
+                    player.hands[player.currentHand].forEach(card => {
+                        const cardEl = document.createElement('div');
+                        cardEl.className = 'card';
+                        cardEl.textContent = `${card.value}${card.suit}`;
+                        cardsEl.appendChild(cardEl);
+                    });
+
+                    playerEl.querySelector('.bet span').textContent = player.bet;
+                }
+            });
+
+            // Update controls based on game phase and current player
+            updateControls(state);
+        }
+
+        function updateControls(state) {
+            const hitBtn = document.getElementById('hit');
+            const standBtn = document.getElementById('stand');
+            const doubleBtn = document.getElementById('double');
+            const splitBtn = document.getElementById('split');
+            
+            // Enable/disable based on game state
+            const isMyTurn = state.currentPlayer === localStorage.getItem('playerId');
+            hitBtn.disabled = !isMyTurn;
+            standBtn.disabled = !isMyTurn;
+            doubleBtn.disabled = !isMyTurn;
+            splitBtn.disabled = !isMyTurn;
+        }
+
+        // Chip click handlers
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const amount = parseInt(this.textContent.replace('$', ''));
+                gameWorker.postMessage({
+                    type: 'place_bet',
+                    amount: amount
+                });
+            });
+        });
+
+        // Action button handlers
+        document.getElementById('hit').addEventListener('click', () => {
+            gameWorker.postMessage({
+                type: 'action',
+                action: 'hit'
+            });
+        });
+
+        document.getElementById('stand').addEventListener('click', () => {
+            gameWorker.postMessage({
+                type: 'action',
+                action: 'stand'
+            });
+        });
+
+        document.getElementById('double').addEventListener('click', () => {
+            gameWorker.postMessage({
+                type: 'action',
+                action: 'double'
+            });
+        });
+
+        document.getElementById('split').addEventListener('click', () => {
+            gameWorker.postMessage({
+                type: 'action',
+                action: 'split'
+            });
+        });
+
+        // Initialize game when page loads
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+</body>
+</html>

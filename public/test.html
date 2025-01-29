@@ -1,0 +1,126 @@
+// public/test.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blackjack WebSocket Test</title>
+    <style>
+        .log-entry { margin: 5px 0; }
+        .log-entry.sent { color: blue; }
+        .log-entry.received { color: green; }
+        .log-entry.error { color: red; }
+        #actionPanel button { margin: 5px; }
+        #messageLog { 
+            height: 400px; 
+            overflow-y: scroll; 
+            border: 1px solid #ccc; 
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Blackjack WebSocket Test Client</h1>
+    
+    <div id="connectionStatus">Status: Disconnected</div>
+    
+    <div id="actionPanel">
+        <h3>Actions</h3>
+        <button onclick="joinTable()">Join Any Table</button>
+        <button onclick="placeBet(10)">Place $10 Bet</button>
+        <button onclick="sendAction('hit')">Hit</button>
+        <button onclick="sendAction('stand')">Stand</button>
+        <button onclick="sendAction('double')">Double Down</button>
+        <button onclick="sendAction('split')">Split</button>
+        <button onclick="getAvailableTables()">Get Tables</button>
+    </div>
+
+    <h3>Message Log</h3>
+    <div id="messageLog"></div>
+
+    <script>
+        let worker = null;
+        let encrypted = false; // Toggle for testing with/without encryption
+
+        function initWorker() {
+            worker = new Worker('testWorker.js');
+            
+            worker.onmessage = function(e) {
+                const message = e.data;
+                
+                switch(message.type) {
+                    case 'connection_status':
+                        document.getElementById('connectionStatus').textContent = 
+                            'Status: ' + message.status;
+                        logMessage('System', `Connection ${message.status}`, 'status');
+                        break;
+                    
+                    case 'state_update':
+                        logMessage('Received', message.data, 'received');
+                        break;
+                    
+                    case 'error':
+                        logMessage('Error', message.error, 'error');
+                        break;
+                        
+                    default:
+                        logMessage('Received', message, 'received');
+                }
+            };
+
+            worker.postMessage({ type: 'connect' });
+        }
+
+        function joinTable(tableId = null) {
+            worker.postMessage({
+                type: 'join_table',
+                tableId: tableId
+            });
+            logMessage('Sent', 'Join table request ' + (tableId || 'any'), 'sent');
+        }
+
+        function placeBet(amount) {
+            worker.postMessage({
+                type: 'place_bet',
+                amount: amount
+            });
+            logMessage('Sent', `Place bet: $${amount}`, 'sent');
+        }
+
+        function sendAction(action) {
+            worker.postMessage({
+                type: 'action',
+                action: action
+            });
+            logMessage('Sent', `Action: ${action}`, 'sent');
+        }
+
+        async function getAvailableTables() {
+            try {
+                const response = await fetch(self.location.origin + ':4444/api/tables');
+                const tables = await response.json();
+                logMessage('Tables', tables, 'received');
+            } catch (error) {
+                logMessage('Error', error.message, 'error');
+            }
+        }
+
+        function logMessage(prefix, message, type) {
+            const log = document.getElementById('messageLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            
+            let messageText = message;
+            if (typeof message === 'object') {
+                messageText = JSON.stringify(message, null, 2);
+            }
+            
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${prefix}: ${messageText}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Initialize on page load
+        initWorker();
+    </script>
+</body>
+</html>
