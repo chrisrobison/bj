@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile - CR Blackjack</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .profile-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #2a2a2a;
+            padding: 2em;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            color: #4CAF50;
+            margin-bottom: 1.5em;
+        }
+
+        .form-section {
+            margin-bottom: 2em;
+            padding: 1em;
+            background-color: #333;
+            border-radius: 4px;
+        }
+
+        .form-section h2 {
+            margin-top: 0;
+            color: #4CAF50;
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 1em;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5em;
+            color: #ddd;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 0.8em;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #222;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .id-upload {
+            border: 2px dashed #444;
+            padding: 2em;
+            text-align: center;
+            margin-bottom: 1em;
+            border-radius: 4px;
+            background-color: #222;
+            cursor: pointer;
+        }
+
+        .id-upload:hover {
+            border-color: #4CAF50;
+            background-color: #2a2a2a;
+        }
+
+        .preview-container {
+            display: none;
+            margin-top: 1em;
+        }
+
+        .preview-container img {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1em 2em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .error {
+            color: #ff4444;
+            margin-top: 0.5em;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .success {
+            color: #4CAF50;
+            margin-top: 0.5em;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .required:after {
+            content: " *";
+            color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <h1>Profile</h1>
+        
+        <form id="kyc-form">
+            <div class="form-section">
+                <h2>Personal Information</h2>
+                <div class="form-group">
+                    <label class="required" for="firstName">First Name</label>
+                    <input type="text" id="firstName" name="firstName" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="lastName">Last Name</label>
+                    <input type="text" id="lastName" name="lastName" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="dob">Date of Birth</label>
+                    <input type="date" id="dob" name="dob" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="nationality">Nationality</label>
+                    <select id="nationality" name="nationality" required>
+                        <option value="">Select nationality</option>
+                        <!-- Dynamically populated -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Contact Information</h2>
+                <div class="form-group">
+                    <label class="required" for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" required>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Address</h2>
+                <div class="form-group">
+                    <label class="required" for="street">Street Address</label>
+                    <input type="text" id="street" name="street" required>
+                </div>
+                <div class="form-group">
+                    <label for="street2">Street Address 2</label>
+                    <input type="text" id="street2" name="street2">
+                </div>
+                <div class="form-group">
+                    <label class="required" for="city">City</label>
+                    <input type="text" id="city" name="city" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="state">State/Province</label>
+                    <input type="text" id="state" name="state" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="postal">Postal Code</label>
+                    <input type="text" id="postal" name="postal" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="country">Country</label>
+                    <select id="country" name="country" required>
+                        <option value="">Select country</option>
+                        <!-- Dynamically populated -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Identity Verification</h2>
+                <div class="form-group">
+                    <label class="required" for="idType">ID Document Type</label>
+                    <select id="idType" name="idType" required>
+                        <option value="">Select document type</option>
+                        <option value="passport">Passport</option>
+                        <option value="nationalId">National ID</option>
+                        <option value="driverLicense">Driver's License</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="idNumber">ID Number</label>
+                    <input type="text" id="idNumber" name="idNumber" required>
+                </div>
+                <div class="form-group">
+                    <label class="required" for="idExpiry">ID Expiry Date</label>
+                    <input type="date" id="idExpiry" name="idExpiry" required>
+                </div>
+                <div class="id-upload" onclick="document.getElementById('idFile').click()">
+                    <p>Click or drag to upload ID document image</p>
+                    <p style="font-size: 0.8em; color: #888;">Supported formats: JPG, PNG (max 5MB)</p>
+                    <input type="file" id="idFile" name="idFile" accept="image/*" style="display: none;" required>
+                </div>
+                <div id="preview" class="preview-container">
+                    <img id="previewImage" src="#" alt="ID Preview">
+                </div>
+                <div id="uploadError" class="error"></div>
+            </div>
+
+            <button type="submit">Submit KYC Information</button>
+            <div id="formError" class="error"></div>
+            <div id="formSuccess" class="success"></div>
+        </form>
+    </div>
+
+    <script>
+        // Fetch country list and populate dropdowns
+        fetch('https://restcountries.com/v3.1/all')
+            .then(response => response.json())
+            .then(data => {
+                const countries = data.sort((a, b) => a.name.common.localeCompare(b.name.common));
+                const nationalitySelect = document.getElementById('nationality');
+                const countrySelect = document.getElementById('country');
+                
+                countries.forEach(country => {
+                    const option = new Option(country.name.common, country.name.common);
+                    const option2 = new Option(country.name.common, country.name.common);
+                    nationalitySelect.add(option);
+                    countrySelect.add(option2);
+                });
+            })
+            .catch(error => console.error('Error fetching countries:', error));
+
+        // Handle file upload and preview
+        document.getElementById('idFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const error = document.getElementById('uploadError');
+            const preview = document.getElementById('preview');
+            const previewImage = document.getElementById('previewImage');
+
+            // Validate file
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    error.textContent = 'File size must be less than 5MB';
+                    error.style.display = 'block';
+                    preview.style.display = 'none';
+                    return;
+                }
+
+                if (!file.type.startsWith('image/')) {
+                    error.textContent = 'File must be an image';
+                    error.style.display = 'block';
+                    preview.style.display = 'none';
+                    return;
+                }
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    preview.style.display = 'block';
+                    error.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('kyc-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const error = document.getElementById('formError');
+            const success = document.getElementById('formSuccess');
+
+            try {
+                const response = await fetch('/api/kyc/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to submit KYC information');
+                }
+
+                success.textContent = 'KYC information submitted successfully!';
+                success.style.display = 'block';
+                error.style.display = 'none';
+                
+                // Optionally redirect after successful submission
+                // setTimeout(() => window.location.href = '/dashboard', 2000);
+            } catch (err) {
+                error.textContent = err.message;
+                error.style.display = 'block';
+                success.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard - Blackjack</title>
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: #2a2a2a;
+            padding: 1.5rem;
+            border-right: 1px solid #3a3a3a;
+        }
+
+        .sidebar h1 {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #4CAF50;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            background-color: #3a3a3a;
+        }
+
+        /* Main content */
+        .main-content {
+            padding: 2rem;
+        }
+
+        .panel {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            color: #4CAF50;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        .data-table th {
+            background-color: #3a3a3a;
+            font-weight: bold;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: #3a3a3a;
+        }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: #3a3a3a;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        /* Buttons */
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        .button-danger {
+            background-color: #dc3545;
+        }
+
+        .button-danger:hover {
+            background-color: #c82333;
+        }
+
+        /* Status indicators */
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .status-active {
+            background-color: #28a745;
+        }
+
+        .status-inactive {
+            background-color: #dc3545;
+        }
+
+        .status-pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #2a2a2a;
+            margin: 10% auto;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #999;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .alert-error {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom-color: #4CAF50;
+            color: #4CAF50;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <h1>Admin Dashboard</h1>
+            <ul class="nav-menu">
+                <li><a href="#" class="active" data-tab="overview">Overview</a></li>
+                <li><a href="#" data-tab="tables">Tables</a></li>
+                <li><a href="#" data-tab="players">Players</a></li>
+                <li><a href="#" data-tab="transactions">Transactions</a></li>
+                <li><a href="#" data-tab="kyc">KYC Verification</a></li>
+                <li><a href="#" data-tab="settings">Settings</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="active-tables">0</div>
+                        <div class="stat-label">Active Tables</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="active-players">0</div>
+                        <div class="stat-label">Active Players</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-bets">$0</div>
+                        <div class="stat-label">Total Bets Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="profit-loss">$0</div>
+                        <div class="stat-label">Profit/Loss Today</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Active Games</h2>
+                        <button class="button" onclick="refreshGames()">Refresh</button>
+                    </div>
+                    <table class="data-table" id="active-games-table">
+                        <thead>
+                            <tr>
+                                <th>Table ID</th>
+                                <th>Players</th>
+                                <th>Total Bets</th>
+                                <th>Game Phase</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tables Tab -->
+            <div id="tables" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Table Management</h2>
+                        <button class="button" onclick="showCreateTableModal()">Create Table</button>
+                    </div>
+                    <table class="data-table" id="tables-table">
+                        <thead>
+                            <tr>
+                                <th>Table ID</th>
+                                <th>Min Bet</th>
+                                <th>Max Bet</th>
+                                <th>Status</th>
+                                <th>Players</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Players Tab -->
+            <div id="players" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Player Management</h2>
+                        <div>
+                            <input type="text" id="player-search" placeholder="Search players...">
+                            <button class="button" onclick="searchPlayers()">Search</button>
+                        </div>
+                    </div>
+                    <table class="data-table" id="players-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                                <th>Last Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- KYC Tab -->
+            <div id="kyc" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">KYC Verification Queue</h2>
+                    </div>
+                    <table class="data-table" id="kyc-table">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Username</th>
+                                <th>Submission Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">System Settings</h2>
+                    </div>
+                    <form id="settings-form">
+                        <div class="form-group">
+                            <label>Default Min Bet</label>
+                            <input type="number" id="default-min-bet" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Default Max Bet</label>
+                            <input type="number" id="default-max-bet" value="500">
+                        </div>
+                        <div class="form-group">
+                            <label>Default Number of Decks</label>
+                            <input type="number" id="default-decks" value="6">
+                        </div>
+                        <button type="submit" class="button">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="create-table-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Create New Table</h2>
+            <form id="create-table-form">
+                <div class="form-group">
+                    <label>Min Bet</label>
+                    <input type="number" name="minBet" required>
+                </div>
+                <div class="form-group">
+                    <label>Max Bet</label>
+                    <input type="number" name="maxBet" required>
+                </div>
+                <div class="form-group">
+                    <label>Number of Decks</label>
+                    <input type="number" name="decks" required>
+                </div>
+                <button type="submit" class="button">Create Table</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentTab = 'overview';
+        let activeGames = [];
+        let tables = [];
+        let players = [];
+        let kycQueue = [];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup navigation
+            document.querySelectorAll('.nav-menu a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const tabId = e.target.dataset.tab;
+                    switchTab(tabId);
+                });
+            });
+
+            // Setup modals
+            document.querySelectorAll('.close-modal').forEach(button => {
+                button.addEventListener('click', () => {
+                    hideModals();
+                });
+            });
+
+            // Initial data load
+            loadDashboardData();
+        });
+
+        // Tab switching
+        function switchTab(tabId) {
+            // Update active tab
+            document.querySelectorAll('.nav-menu a').forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.tab === tabId) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Show selected tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+
+            // Load tab-specific data
+            loadTabData(tabId);
+        }
+
+        // Modal handling
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        function hideModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+
+        // Data loading functions
+        async function loadDashboardData() {
+            try {
+                const token = localStorage.getItem('jwt_token');
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Load overview data
+                const response = await fetch('/api/admin/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load dashboard data');
+                }
+
+                const data = await response.json();
+                updateDashboardStats(data);
+                updateActiveGames(data.activeGames);
+            } catch (error) {
+                showError('Failed to load dashboard data');
+                console.error('Dashboard load error:', error);
+            }
+        }
+
+        async function loadTabData(tabId) {
+            switch(tabId) {
+                case 'tables':
+                    await loadTables();
+                    break;
+                case 'players':
+                    await loadPlayers();
+                    break;
+                case 'kyc':
+                    await loadKYCQueue();
+                    break;
+            }
+        }
+
+        // API calls
+        async function loadTables() {
+            try {
+                const response = await fetch('/api/admin/tables', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load tables');
+
+                const tables = await response.json();
+                updateTablesTable(tables);
+            } catch (error) {
+                showError('Failed to load tables');
+                console.error('Tables load error:', error);
+            }
+        }
+
+        async function loadPlayers() {
+            try {
+                const response = await fetch('/api/admin/players', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load players');
+
+                const players = await response.json();
+                updatePlayersTable(players);
+            } catch (error) {
+                showError('Failed to load players');
+                console.error('Players load error:', error);
+            }
+        }
+
+        async function loadKYCQueue() {
+            try {
+                const response = await fetch('/api/admin/kyc/queue', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load KYC queue');
+
+                const queue = await response.json();
+                updateKYCTable(queue);
+            } catch (error) {
+                showError('Failed to load KYC queue');
+                console.error('KYC queue load error:', error);
+            }
+        }
+
+        // UI update functions
+        function updateDashboardStats(data) {
+            document.getElementById('active-tables').textContent = data.activeTables;
+            document.getElementById('active-players').textContent = data.activePlayers;
+            document.getElementById('total-bets').textContent = formatCurrency(data.totalBets);
+            document.getElementById('profit-loss').textContent = formatCurrency(data.profitLoss);
+        }
+
+        function updateActiveGames(games) {
+            const tableBody = document.querySelector('#active-games-table tbody');
+            tableBody.innerHTML = '';
+
+            games.forEach(game => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${game.tableId}</td>
+                    <td>${game.playerCount}/${game.maxPlayers}</td>
+                    <td>${formatCurrency(game.totalBets)}</td>
+                    <td><span class="status status-${game.phase.toLowerCase()}">${game.phase}</span></td>
+                    <td>
+                        <button class="button" onclick="viewGame('${game.tableId}')">View</button>
+                        <button class="button button-danger" onclick="closeTable('${game.tableId}')">Close</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updateTablesTable(tables) {
+            const tableBody = document.querySelector('#tables-table tbody');
+            tableBody.innerHTML = '';
+
+            tables.forEach(table => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${table.id}</td>
+                    <td>${formatCurrency(table.minBet)}</td>
+                    <td>${formatCurrency(table.maxBet)}</td>
+                    <td><span class="status status-${table.status.toLowerCase()}">${table.status}</span></td>
+                    <td>${table.playerCount}/${table.maxPlayers}</td>
+                    <td>
+                        <button class="button" onclick="editTable('${table.id}')">Edit</button>
+                        <button class="button button-danger" onclick="deleteTable('${table.id}')">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updatePlayersTable(players) {
+            const tableBody = document.querySelector('#players-table tbody');
+            tableBody.innerHTML = '';
+
+            players.forEach(player => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${player.id}</td>
+                    <td>${player.username}</td>
+                    <td>${formatCurrency(player.balance)}</td>
+                    <td><span class="status status-${player.status.toLowerCase()}">${player.status}</span></td>
+                    <td>${formatDate(player.lastActive)}</td>
+                    <td>
+                        <button class="button" onclick="viewPlayer('${player.id}')">View</button>
+                        <button class="button ${player.status === 'blocked' ? '' : 'button-danger'}"
+                                onclick="togglePlayerStatus('${player.id}')">
+                            ${player.status === 'blocked' ? 'Unblock' : 'Block'}
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updateKYCTable(queue) {
+            const tableBody = document.querySelector('#kyc-table tbody');
+            tableBody.innerHTML = '';
+
+            queue.forEach(submission => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${submission.userId}</td>
+                    <td>${submission.username}</td>
+                    <td>${formatDate(submission.submissionDate)}</td>
+                    <td><span class="status status-${submission.status.toLowerCase()}">${submission.status}</span></td>
+                    <td>
+                        <button class="button" onclick="reviewKYC('${submission.id}')">Review</button>
+                        <button class="button button-danger" onclick="rejectKYC('${submission.id}')">Reject</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Action handlers
+        async function createTable(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const tableData = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/admin/tables', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                    },
+                    body: JSON.stringify(tableData)
+                });
+
+                if (!response.ok) throw new Error('Failed to create table');
+
+                hideModals();
+                await loadTables();
+                showSuccess('Table created successfully');
+            } catch (error) {
+                showError('Failed to create table');
+                console.error('Table creation error:', error);
+            }
+        }
+
+        async function closeTable(tableId) {
+            if (!confirm('Are you sure you want to close this table?')) return;
+
+            try {
+                const response = await fetch(`/api/admin/tables/${tableId}/close`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to close table');
+
+                await loadDashboardData();
+                showSuccess('Table closed successfully');
+            } catch (error) {
+                showError('Failed to close table');
+                console.error('Table closure error:', error);
+            }
+        }
+
+        async function togglePlayerStatus(playerId) {
+            try {
+                const response = await fetch(`/api/admin/players/${playerId}/toggle-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to toggle player status');
+
+                await loadPlayers();
+                showSuccess('Player status updated successfully');
+            } catch (error) {
+                showError('Failed to update player status');
+                console.error('Player status update error:', error);
+            }
+        }
+
+        async function reviewKYC(submissionId) {
+            // Implement KYC review modal and logic
+        }
+
+        // Utility functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+
+        function showError(message) {
+            // Implement error toast or notification
+            alert(message);
+        }
+
+        function showSuccess(message) {
+            // Implement success toast or notification
+            alert(message);
+        }
+
+        // Real-time updates
+        let wsConnection;
+
+        function setupWebSocket() {
+            const token = localStorage.getItem('jwt_token');
+            wsConnection = new WebSocket(`wss://${window.location.hostname}:4444/admin?token=${token}`);
+
+            wsConnection.onmessage = (event) => {
+                const update = JSON.parse(event.data);
+                handleRealtimeUpdate(update);
+            };
+
+            wsConnection.onclose = () => {
+                // Attempt to reconnect after a delay
+                setTimeout(setupWebSocket, 5000);
+            };
+        }
+
+        function handleRealtimeUpdate(update) {
+            switch (update.type) {
+                case 'game_state':
+                    if (currentTab === 'overview') {
+                        updateActiveGames(update.games);
+                    }
+                    break;
+                case 'player_action':
+                    if (currentTab === 'players') {
+                        loadPlayers();
+                    }
+                    break;
+                case 'kyc_submission':
+                    if (currentTab === 'kyc') {
+                        loadKYCQueue();
+                    }
+                    break;
+            }
+        }
+
+        // Initial WebSocket setup
+        setupWebSocket();
+    </script>
+</body>
+</html>

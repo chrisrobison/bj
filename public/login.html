@@ -116,12 +116,13 @@
                 }));
 
                 // Redirect to game
-                window.location.href = '/bj2/public/game.html';
+                window.location.href = '/bj2/public/';
             } catch (error) {
                 errorDiv.textContent = error.message;
                 errorDiv.style.display = 'block';
             }
        });
+        document.querySelector("#username").focus();
     </script>
 </body>
 </html>

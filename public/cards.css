@@ -1,0 +1,58 @@
+ @charset "UTF-8";
+
+ .card-1♠ .card-front, .card-1S .card-front, .card-AS .card-front { background-position: -0px -0px; }
+ .card-2♠ .card-front, .card-2S .card-front { background-position: -150px -0px; }
+ .card-3♠ .card-front, .card-3S .card-front { background-position: -300px -0px; }
+ .card-4♠ .card-front, .card-4S .card-front { background-position: -450px -0px; }
+ .card-5♠ .card-front, .card-5S .card-front { background-position: -600px -0px; }
+ .card-6♠ .card-front, .card-6S .card-front { background-position: -750px -0px; }
+ .card-7♠ .card-front, .card-7S .card-front { background-position: -900px -0px; }
+ .card-8♠ .card-front, .card-8S .card-front { background-position: -1050px -0px; }
+ .card-9♠ .card-front, .card-9S .card-front { background-position: -1200px -0px; }
+.card-10♠ .card-front, .card-10S .card-front, .card-XS .card-front { background-position: -1350px -0px; }
+.card-11♠ .card-front, .card-11S .card-front, .card-JS .card-front { background-position: -1500px -0px; }
+.card-12♠ .card-front, .card-12S .card-front, .card-QS .card-front { background-position: -1650px -0px; }
+.card-13♠ .card-front, .card-13S .card-front, .card-KS .card-front { background-position: -1800px -0px; }
+
+ .card-1♥ .card-front, .card-1H .card-front, .card-AH .card-front { background-position: 0px -198px ; }
+ .card-2♥ .card-front, .card-2H .card-front { background-position: -150px -198px; }
+ .card-3♥ .card-front, .card-3H .card-front { background-position: -300px -198px; }
+ .card-4♥ .card-front, .card-4H .card-front { background-position: -450px -198px; }
+ .card-5♥ .card-front, .card-5H .card-front { background-position: -600px -198px; }
+ .card-6♥ .card-front, .card-6H .card-front { background-position: -750px -198px; }
+ .card-7♥ .card-front, .card-7H .card-front { background-position: -900px -198px; }
+ .card-8♥ .card-front, .card-8H .card-front { background-position: -1050px -198px; }
+ .card-9♥ .card-front, .card-9H .card-front { background-position: -1200px -198px; }
+.card-10♥ .card-front, .card-10H .card-front, .card-XH .card-front { background-position: -1350px -198px; }
+.card-11♥ .card-front, .card-11H .card-front, .card-JH .card-front { background-position: -1500px -198px; }
+.card-12♥ .card-front, .card-12H .card-front, .card-QH .card-front { background-position: -1650px -198px; }
+.card-13♥ .card-front, .card-13H .card-front, .card-KH .card-front { background-position: -1800px -198px; }
+
+ .card-1♣ .card-front, .card-1C .card-front, .card-AC .card-front { background-position: 0px -396px ; }
+ .card-2♣ .card-front, .card-2C .card-front { background-position: -150px -396px; }
+ .card-3♣ .card-front, .card-3C .card-front { background-position: -300px -396px; }
+ .card-4♣ .card-front, .card-4C .card-front { background-position: -450px -396px; }
+ .card-5♣ .card-front, .card-5C .card-front { background-position: -600px -396px; }
+ .card-6♣ .card-front, .card-6C .card-front { background-position: -750px -396px; }
+ .card-7♣ .card-front, .card-7C .card-front { background-position: -900px -396px; }
+ .card-8♣ .card-front, .card-8C .card-front { background-position: -1050px -396px; }
+ .card-9♣ .card-front, .card-9C .card-front { background-position: -1200px -396px; }
+.card-10♣ .card-front, .card-10C .card-front, .card-XC .card-front { background-position: -1350px -396px; }
+.card-11♣ .card-front, .card-11C .card-front, .card-JC .card-front { background-position: -1500px -396px; }
+.card-12♣ .card-front, .card-12C .card-front, .card-QC .card-front { background-position: -1650px -396px; }
+.card-13♣ .card-front, .card-13C .card-front, .card-KC .card-front { background-position: -1800px -396px; }
+
+ .card-1♦ .card-front, .card-1D .card-front, .card-AD .card-front { background-position: 0px -594px ; }
+ .card-2♦ .card-front, .card-2D .card-front { background-position: -150px -594px; }
+ .card-3♦ .card-front, .card-3D .card-front { background-position: -300px -594px; }
+ .card-4♦ .card-front, .card-4D .card-front { background-position: -450px -594px; }
+ .card-5♦ .card-front, .card-5D .card-front { background-position: -600px -594px; }
+ .card-6♦ .card-front, .card-6D .card-front { background-position: -750px -594px; }
+ .card-7♦ .card-front, .card-7D .card-front { background-position: -900px -594px; }
+ .card-8♦ .card-front, .card-8D .card-front { background-position: -1050px -594px; }
+ .card-9♦ .card-front, .card-9D .card-front { background-position: -1200px -594px; }
+.card-10♦ .card-front, .card-10D .card-front, .card-XD .card-front { background-position: -1350px -594px; }
+.card-11♦ .card-front, .card-11D .card-front, .card-JD .card-front { background-position: -1500px -594px; }
+.card-12♦ .card-front, .card-12D .card-front, .card-QD .card-front { background-position: -1650px -594px; }
+.card-13♦ .card-front, .card-13D .card-front, .card-KD .card-front { background-position: -1800px -594px; }
+

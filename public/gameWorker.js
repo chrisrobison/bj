@@ -63,6 +63,8 @@ function connectWebSocket(token) {
             console.log('Received message:', event.data);
             try {
                 const message = JSON.parse(event.data);
+                console.log("Parsed message:", message);
+
                 handleServerMessage(message);
             } catch (error) {
                 console.error('Failed to parse message:', error);
@@ -77,14 +79,18 @@ function connectWebSocket(token) {
 
 
 function handleServerMessage(message) {
+    console.log('Handling server message:', message);
     switch (message.type) {
         case 'state_update':
+            console.log('Received state update:', message.data);
             postMessage({ type: 'state_update', data: message.data });
             break;
         case 'error':
+            console.log('Received error:', message.message);
             postMessage({ type: 'error', error: message.message });
             break;
         default:
+            console.log('Unknown message type:', message.type);
             postMessage({ type: 'unknown_message', data: message });
     }
 }

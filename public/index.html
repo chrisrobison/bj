@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blackjack Game</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Navigation toggle button */
+        .nav-toggle {
+            position: fixed;
+            top: 0px;
+            left: 0px;
+            width: 38px;
+            height:38px;
+            background-color: #222;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            padding: 8px;
+                z-index: 999;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background-color: white;
+            transition: all 0.3s ease;
+        }
+
+        .nav-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .nav-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .nav-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        /* Navigation sidebar */
+        .nav-sidebar {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100vh;
+            background-color: #2a2a2a;
+            transition: left 0.3s ease;
+            z-index: 999;
+            padding: 80px 20px 20px;
+            overflow-y: auto;
+        }
+
+        .nav-sidebar.active {
+            left: 0;
+        }
+
+        /* Navigation tree */
+        .nav-tree {
+            list-style: none;
+        }
+
+        .nav-tree li {
+            margin: 8px 0;
+        }
+
+        .nav-tree a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .nav-tree a:hover {
+            background-color: #3a3a3a;
+        }
+
+        .nav-tree .submenu {
+            list-style: none;
+            margin-left: 20px;
+            display: none;
+        }
+
+        .nav-tree .submenu.active {
+            display: block;
+        }
+
+        .nav-tree .has-submenu > a:after {
+            content: "▼";
+            float: right;
+            font-size: 12px;
+            margin-top: 3px;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-tree .has-submenu.active > a:after {
+            transform: rotate(180deg);
+        }
+
+        /* Main content wrapper */
+        .content-wrapper {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        .content-wrapper.shifted {
+            margin-left: 300px;
+        }
+
+        /* iFrame styles */
+        #game-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content-wrapper.shifted #game-frame {
+            width: calc(100% - 300px);
+            margin-left: 300px;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 998;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <button class="nav-toggle" aria-label="Toggle navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <nav class="nav-sidebar">
+        <ul class="nav-tree">
+            <li><a href="/game.html" target="game-frame">Home</a></li>
+            <li id="tableAction"><a href="/tables.html" target="game-frame">Join Table</a></li>
+            <li><a href="/profile.html" target="game-frame">Profile</a></li>
+            <li><a href="/settings.html" target="game-frame">Settings</a></li>
+            <li class="has-submenu">
+                <a href="#">Legal</a>
+                <ul class="submenu">
+                    <li><a href="/legal/privacy.html" target="game-frame">Privacy Policy</a></li>
+                    <li><a href="/legal/cookies.html" target="game-frame">Cookie Policy</a></li>
+                    <li><a href="/legal/terms.html" target="game-frame">Terms of Service</a></li>
+                </ul>
+            </li>
+            <li><a href="#" id="logoutLink">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="overlay"></div>
+
+    <main class="content-wrapper">
+        <iframe id="game-frame" name="game-frame" src="game.html" allow="fullscreen"></iframe>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const navToggle = document.querySelector('.nav-toggle');
+            const navSidebar = document.querySelector('.nav-sidebar');
+            const contentWrapper = document.querySelector('.content-wrapper');
+            const overlay = document.querySelector('.overlay');
+            const submenuItems = document.querySelectorAll('.has-submenu');
+            const tableActionItem = document.getElementById('tableAction');
+            const logoutLink = document.getElementById('logoutLink');
+            const gameFrame = document.getElementById('game-frame');
+
+            // Toggle navigation
+            function toggleNav() {
+                navToggle.classList.toggle('active');
+                navSidebar.classList.toggle('active');
+                contentWrapper.classList.toggle('shifted');
+                overlay.classList.toggle('active');
+            }
+
+            // Event listeners
+            navToggle.addEventListener('click', toggleNav);
+            overlay.addEventListener('click', toggleNav);
+
+            // Submenu toggling
+            submenuItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target === item.querySelector('a')) {
+                        e.preventDefault();
+                        item.classList.toggle('active');
+                        item.querySelector('.submenu').classList.toggle('active');
+                    }
+                });
+            });
+
+            // Update Join/Leave Table link based on game state
+            function updateTableAction() {
+                // We need to check the iframe's localStorage
+                try {
+                    const isAtTable = gameFrame.contentWindow.localStorage.getItem('tableId') !== null;
+                    const link = tableActionItem.querySelector('a');
+                    if (isAtTable) {
+                        link.textContent = 'Leave Table';
+                        link.href = '#';
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            const gameUI = gameFrame.contentWindow.gameUI;
+                            if (gameUI && typeof gameUI.leaveTable === 'function') {
+                                gameUI.leaveTable();
+                            }
+                            gameFrame.contentWindow.localStorage.removeItem('tableId');
+                            updateTableAction();
+                        };
+                    } else {
+                        link.textContent = 'Join Table';
+                        link.href = '/tables.html';
+                        link.onclick = null;
+                    }
+                } catch (e) {
+                    console.error('Error accessing iframe localStorage:', e);
+                }
+            }
+
+            // Handle logout
+            logoutLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                try {
+                    gameFrame.contentWindow.localStorage.clear();
+                    localStorage.clear();
+                } catch (e) {
+                    console.error('Error clearing iframe localStorage:', e);
+                }
+                window.location.href = '/login.html';
+            });
+
+            // Initial table action update after frame loads
+            gameFrame.addEventListener('load', () => {
+                updateTableAction();
+                
+                // Listen for storage events in the iframe
+                gameFrame.contentWindow.addEventListener('storage', (e) => {
+                    if (e.key === 'tableId') {
+                        updateTableAction();
+                    }
+                });
+            });
+
+            // Prevent iframe from being scrolled to when clicking navigation
+            document.querySelectorAll('a[target="game-frame"]').forEach(link => {
+                link.addEventListener('click', () => {
+                    setTimeout(() => {
+                        gameFrame.focus();
+                    }, 100);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

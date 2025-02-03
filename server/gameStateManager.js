@@ -1,6 +1,7 @@
 // server/gameStateManager.js
 const { v4: uuidv4 } = require('uuid');
 const pool = require('./db');
+const { BlackjackTable } = require('./blackjackTable');
 
 class GameStateManager {
     constructor() {
@@ -34,33 +35,58 @@ class GameStateManager {
         return table;
     }
 
-    async getTableState(tableId) {
-        const table = this.activeTables.get(tableId);
-        if (!table) {
-            throw new Error('Table not found');
+async getTableState(tableId) {
+    const table = this.activeTables.get(tableId);
+    if (!table) {
+        throw new Error('Table not found');
+    }
+
+    console.log('Getting table state for phase:', table.gamePhase);
+    
+    return {
+        tableId: tableId,
+        config: table.config,
+        gamePhase: table.gamePhase,
+        currentPlayer: table.currentPlayer,
+        dealer: {
+            cards: [...table.dealer.cards]  // Make a copy
+        },
+        players: Array.from(table.players.entries()).map(([id, player]) => ({
+            id,
+            hands: player.hands.map(hand => [...hand]),  // Deep copy of hands
+            currentHand: player.currentHand,
+            bet: player.bet,
+            status: player.status
+        }))
+    };
+}
+
+   async getPlayerView(tableId, playerId, state) {
+        // Clone the state to avoid modifying the original
+        const playerView = JSON.parse(JSON.stringify(state));
+
+        if (!playerView.dealer) {
+            console.log('No dealer in state:', state);
+            playerView.dealer = { cards: [] };
         }
 
-        const activeGameId = await this.getActiveGameId(tableId);
-        const activeGame = this.activeGames.get(activeGameId);
+        console.log('Dealer cards before view modification:', playerView.dealer.cards);
 
-        return {
-            tableId: tableId,
-            config: table.config,
-            gamePhase: activeGame ? activeGame.phase : 'betting',
-            dealer: {
-                cards: activeGame ? activeGame.dealerCards : []
-            },
-            players: Array.from(table.players.entries()).map(([playerId, player]) => {
-                const playerHand = activeGame ? activeGame.playerHands.get(playerId) : null;
-                return {
-                    id: playerId,
-                    hands: player.hands,
-                    currentHand: player.currentHand,
-                    bet: playerHand ? playerHand.betAmount : 0,
-                    status: player.status
-                };
-            })
-        };
+        // Only send the face-up card during betting/playing phases
+        if ((playerView.gamePhase === 'playing' || playerView.gamePhase === 'betting') && playerView.dealer.cards.length > 1) {
+            // Only send the first card, completely omit the second
+            playerView.dealer.cards = [playerView.dealer.cards[0]];
+        }
+
+        console.log('Dealer cards after view modification:', playerView.dealer.cards);
+
+        // Add any player-specific information
+        const player = playerView.players.find(p => p.id === playerId);
+        if (player) {
+            player.isCurrentPlayer = (state.currentPlayer === playerId);
+        }
+
+        return playerView;
     }
 
     async getPlayerView(tableId, playerId, state) {
@@ -70,6 +96,12 @@ class GameStateManager {
         // Hide dealer's hole card during play if necessary
         if (playerView.gamePhase === 'playing' && playerView.dealer.cards.length > 1) {
             playerView.dealer.cards[1] = { hidden: true };
+        }
+
+          // Only send the face-up card during betting/playing phases
+        if ((playerView.gamePhase === 'playing' || playerView.gamePhase === 'betting') && playerView.dealer.cards.length > 0) {
+            // Only send the first card, completely omit the second
+            playerView.dealer.cards = [playerView.dealer.cards[0]];
         }
 
         // Add any player-specific information
@@ -87,59 +119,17 @@ class GameStateManager {
             .find(([_, game]) => game.tableId === tableId)?.[0] || null;
     }
 
-    async startNewGame(tableId) {
-        const conn = await pool.getConnection();
-        try {
-            await conn.beginTransaction();
-
-            const gameId = uuidv4();
-            await conn.execute(
-                'INSERT INTO games (id, table_id, game_phase) VALUES (?, ?, ?)',
-                [gameId, tableId, 'betting']
-            );
-
-            // Create player hands for all active positions
-            const [positions] = await conn.execute(
-                'SELECT * FROM player_positions WHERE table_id = ? AND status = ?',
-                [tableId, 'active']
-            );
-
-            for (const position of positions) {
-                await conn.execute(
-                    'INSERT INTO player_hands (id, game_id, player_position_id, cards, bet_amount, status) VALUES (?, ?, ?, ?, ?, ?)',
-                    [uuidv4(), gameId, position.id, '[]', 0, 'betting']
-                );
-            }
-
-            await conn.commit();
-
-            // Update in-memory state
-            const game = {
-                id: gameId,
-                tableId,
-                phase: 'betting',
-                playerHands: new Map(),
-                dealerCards: []
-            };
-            this.activeGames.set(gameId, game);
-
-            return game;
-        } catch (error) {
-            await conn.rollback();
-            throw error;
-        } finally {
-            conn.release();
-        }
-    }
 
     async addPlayerToTable(tableId, userId, position) {
         const conn = await pool.getConnection();
         try {
-            const positionId = uuidv4();
             await conn.execute(
-                'INSERT INTO player_positions (id, table_id, user_id, position) VALUES (?, ?, ?, ?)',
-                [positionId, tableId, userId, position]
+                'INSERT INTO player_positions (table_id, user_id, position) VALUES (?, ?, ?, ?)',
+                [tableId, userId, position]
             );
+
+            // Get the auto-generated ID from the insert result
+            const positionId = result.insertId;
 
             // Update in-memory state
             const table = this.activeTables.get(tableId);
@@ -153,6 +143,7 @@ class GameStateManager {
         }
     }
 
+// In gameStateManager.js
     async startNewGame(tableId) {
         const conn = await pool.getConnection();
         try {
@@ -170,10 +161,11 @@ class GameStateManager {
                 [tableId, 'active']
             );
 
+            // Create hands for each position
             for (const position of positions) {
                 await conn.execute(
-                    'INSERT INTO player_hands (id, game_id, player_position_id, cards, bet_amount, status) VALUES (?, ?, ?, ?, ?, ?)',
-                    [uuidv4(), gameId, position.id, '[]', 0, 'betting']
+                    'INSERT INTO player_hands (game_id, player_position_id, cards, bet_amount, status) VALUES (?, ?, ?, ?, ?)',
+                    [gameId, position.id, '[]', 0, 'betting']
                 );
             }
 
@@ -189,12 +181,99 @@ class GameStateManager {
             };
             this.activeGames.set(gameId, game);
 
-            return game;
+            return gameId;
         } catch (error) {
             await conn.rollback();
             throw error;
         } finally {
             conn.release();
+        }
+    }
+
+    async updateGamePhase(tableId, phase) {
+        console.log(`Updating game phase for table ${tableId} to ${phase}`);
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            // Get active game
+            const gameId = await this.getActiveGameId(tableId);
+            if (!gameId) {
+                throw new Error('No active game found');
+            }
+
+            // Update game phase in database
+            await conn.execute(
+                'UPDATE games SET game_phase = ? WHERE id = ?',
+                [phase, gameId]
+            );
+
+            // Update in-memory state
+            const table = this.activeTables.get(tableId);
+            if (table) {
+                table.gamePhase = phase;
+            }
+
+            await conn.commit();
+
+            // Get and broadcast updated state
+            const state = await this.getTableState(tableId);
+            
+            console.log('Broadcasting updated state after phase change:', state);
+            this.broadcastTableState(tableId);
+
+        } catch (error) {
+            await conn.rollback();
+            console.error('Error updating game phase:', error);
+            throw error;
+        } finally {
+            conn.release();
+        }
+    }
+   
+    async broadcastTableState(tableId) {
+        console.log(`Broadcasting state for table ${tableId}`);
+        try {
+            const state = await this.getTableState(tableId);
+            console.log('State to broadcast:', state);
+
+            // Make sure global.clients exists
+            if (!global.clients) {
+                console.error('No clients map available');
+                return;
+            }
+
+            // Get array of WebSocket clients for this table
+            const tableClients = Array.from(global.clients.entries())
+                .filter(([_, client]) => client.tableId === tableId);
+
+            // Broadcast to each client
+            for (const [ws, client] of tableClients) {
+                try {
+                    // Get player-specific view
+                    const playerView = await this.getPlayerView(tableId, client.id, state);
+                    console.log(`Sending state to player ${client.id}:`, playerView);
+                    
+                    ws.send(JSON.stringify({
+                        type: 'state_update',
+                        data: playerView
+                    }));
+                } catch (error) {
+                    console.error(`Error sending state to client ${client.id}:`, error);
+                }
+            }
+        } catch (error) {
+            console.error('Error broadcasting table state:', error);
+            // Notify all clients at the table about the error
+            const tableClients = Array.from(global.clients.entries())
+                .filter(([_, client]) => client.tableId === tableId);
+            
+            for (const [ws, _] of tableClients) {
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Error updating game state'
+                }));
+            }
         }
     }
 
@@ -408,12 +487,31 @@ class GameStateManager {
 
     // Utility methods
     calculateHandTotal(cards) {
-        // Implementation of blackjack hand total calculation
+        return this.calculateHand(cards);
     }
 
-    updateGameState(gameId) {
-        // Sync in-memory state with database
-    }
-}
+    calculateHand(cards) {
+        let total = 0;
+        let aces = 0;
+
+        for (const card of cards) {
+            if (card.value === 1) {
+                aces++;
+            } else {
+                total += Math.min(10, card.value);
+            }
+        }
+
+        // Add aces
+        for (let i = 0; i < aces; i++) {
+            if (total + 11 <= 21) {
+                total += 11;
+            } else {
+                total += 1;
+            }
+        }
+
+        return total;
+    }}
 
 module.exports = { GameStateManager };
