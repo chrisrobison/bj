@@ -2,6 +2,7 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-plusplus */
+/* eslint-disable class-methods-use-this */
 // tableManager.js
 const { v4: uuidv4 } = require('uuid');
 const BlackjackTable = require('./blackjackTable');
@@ -188,7 +189,7 @@ class TableManager {
 
       // Remove from memory if exists in any table
       for (const [id, existingTable] of this.tables.entries()) {
-        console.log(`Removing player ${id} from table`, existingTable)
+        console.log(`Removing player ${id} from table`, existingTable);
         if (existingTable.players.has(playerId)) {
           existingTable.removePlayer(playerId);
         }
@@ -416,7 +417,10 @@ class TableManager {
     const dealerTotal = table.calculateHand(table.dealer.cards);
     const dealerBusted = dealerTotal > 21;
 
-    // Calculate results for each player
+    // Create array to store all results before DB insertion
+    const gameResults = [];
+
+    // Calculate results for each player first
     for (const player of table.players.values()) {
       for (let i = 0; i < player.hands.length; i++) {
         const playerTotal = table.calculateHand(player.hands[i]);
@@ -438,17 +442,47 @@ class TableManager {
           payout = player.bet;
         }
 
-        // Record result
-        const conn = await pool.getConnection();
-        try {
-          await conn.execute(
-            'INSERT INTO game_results (id, game_id, player_hand_id, outcome, payout_amount) VALUES (?, ?, ?, ?, ?)',
-            [uuidv4(), gameId, player.id, outcome, payout],
-          );
-        } finally {
-          conn.release();
-        }
+        // Store result in array instead of immediate DB insertion
+        gameResults.push({
+          id: uuidv4(),
+          gameId,
+          playerId: player.id,
+          outcome,
+          payout,
+        });
       }
+    }
+
+    // Single database connection to handle all results
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // Insert all results in a single transaction
+      const insertPromises = gameResults.map((result) => conn.execute(
+        'INSERT INTO game_results (id, game_id, player_hand_id, outcome, payout_amount) VALUES (?, ?, ?, ?, ?)',
+        [result.id, result.gameId, result.playerId, result.outcome, result.payout],
+      ));
+
+      await Promise.all(insertPromises);
+      await conn.commit();
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
+
+    // Reset table for next round - keep this part as is
+    table.gamePhase = 'betting';
+    table.currentPlayer = null;
+    table.dealer.cards = [];
+
+    for (const player of table.players.values()) {
+      player.hands = [[]];
+      player.currentHand = 0;
+      player.bet = 0;
+      player.status = 'betting';
     }
 
     // Reset table for next round

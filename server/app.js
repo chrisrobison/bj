@@ -9,7 +9,6 @@ const WebSocket = require('ws');
 const cors = require('cors');
 const multer = require('multer');
 const Auth = require('./auth');
-const AuthMiddleware = require('./middleware/auth');
 const { TableManager } = require('./tableManager');
 const { TransactionManager } = require('./transactions');
 const { GameStateManager } = require('./gameStateManager');
@@ -75,6 +74,30 @@ const wss = new WebSocket.Server({
 
 // Track client connections
 const clients = new Map();
+
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  console.log('Auth header:', authHeader); // Debug log
+
+  const mytoken = authHeader && authHeader.split(' ')[1];
+  if (!mytoken) {
+    return res.status(401).json({
+      error: 'No token provided',
+    });
+  }
+
+  const myuser = Auth.verifyToken(mytoken);
+  console.log('Verified user:', myuser); // Debug log
+
+  if (!myuser) {
+    return res.status(403).json({
+      error: 'Invalid token',
+    });
+  }
+
+  req.user = myuser;
+  return next();
+}
 
 // WebSocket connection handling
 wss.on('connection', async (ws, req) => {
@@ -287,30 +310,6 @@ wss.on('connection', async (ws, req) => {
     }
   }
 
-  function authMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
-    console.log('Auth header:', authHeader); // Debug log
-
-    const mytoken = authHeader && authHeader.split(' ')[1];
-    if (!mytoken) {
-      return res.status(401).json({
-        error: 'No token provided',
-      });
-    }
-
-    const myuser = Auth.verifyToken(mytoken);
-    console.log('Verified user:', myuser); // Debug log
-
-    if (!myuser) {
-      return res.status(403).json({
-        error: 'Invalid token',
-      });
-    }
-
-    req.user = myuser;
-    return next();
-  }
-
   // Utility functions
   // Message handling
   async function handleMessage(conn, message) {
@@ -334,11 +333,6 @@ wss.on('connection', async (ws, req) => {
       console.error('Error handling message:', error);
       sendError(ws, error.message);
     }
-  }
-
-
-  function generatePlayerId() {
-    return `player_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   ws.on('message', async (message) => {
@@ -373,7 +367,7 @@ app.get('/api/tables', (req, res) => {
     config: table.config,
     gamePhase: table.gamePhase,
   }));
-  res.json(tables);
+  return res.json(tables);
 });
 
 app.post('/auth/signup', async (req, res) => {
@@ -394,7 +388,7 @@ app.post('/auth/signup', async (req, res) => {
     }
 
     const result = await Auth.createUser(username, email, password);
-    res.json({
+    return res.json({
       message: 'User created successfully',
       token: result.token,
     });
@@ -403,6 +397,7 @@ app.post('/auth/signup', async (req, res) => {
       error: error.message,
     });
   }
+  return res.status(200).json({ status: 'ok' });
 });
 
 app.post('/auth/login', async (req, res) => {
@@ -461,10 +456,10 @@ app.post(
         profileData,
         req.file,
       );
-      res.json(result);
+      return res.json(result);
     } catch (error) {
       console.error('Profile submission error:', error);
-      res.status(400).json({
+      return res.status(400).json({
         error: error.message,
       });
     }
@@ -480,10 +475,10 @@ app.get('/api/profile/status', authMiddleware, async (req, res) => {
         error: 'No Profile information found',
       });
     }
-    res.json(status);
+    return res.json(status);
   } catch (error) {
     console.error('Profile status error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
     });
   }
@@ -498,10 +493,10 @@ app.get('/api/profile/info', authMiddleware, async (req, res) => {
         error: 'No Profile information found',
       });
     }
-    res.json(info);
+    return res.json(info);
   } catch (error) {
     console.error('Profile info error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
     });
   }
@@ -531,12 +526,12 @@ app.post('/api/profile/:id/status', authMiddleware, async (req, res) => {
       rejectionReason,
     );
 
-    res.json({
+    return res.json({
       message: 'Profile status updated successfully',
     });
   } catch (error) {
     console.error('Profile status update error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message,
     });
   }
