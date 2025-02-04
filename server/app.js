@@ -122,6 +122,10 @@ wss.on('connection', async (ws, req) => {
 
   console.log('User authenticated:', user.username);
   ws.user = user;
+  
+  // Set admin flag if applicable
+  ws.isAdmin = user.isAdmin || false;
+
   global.clients.set(ws, {
     id: user.id,
     username: user.username,
@@ -130,6 +134,19 @@ wss.on('connection', async (ws, req) => {
 
   console.log('Client added to active connections');
   console.log('Current clients:', Array.from(global.clients.keys()).length);
+
+  // Send initial state to admins
+  if (ws.isAdmin) {
+    try {
+      const games = await AdminHandler.getActiveGames();
+      ws.send(JSON.stringify({
+        type: 'game_state',
+        games,
+      }));
+    } catch (error) {
+      console.error('Error sending initial state to admin:', error);
+    }
+  }
 
   // Broadcast current game state to all clients
   function sendError(conn, message) {
@@ -687,37 +704,6 @@ app.put('/api/admin/settings', adminAuthMiddleware, async (req, res) => {
   }
 });
 
-// Real-time game monitoring
-wss.on('connection', async (ws, req) => {
-  // Check if this is an admin connection
-  const url = new URL(req.url, 'ws://localhost');
-  const token = url.searchParams.get('token');
-  const user = Auth.verifyToken(token);
-
-  if (!user || !user.isAdmin) {
-    ws.close(4001, 'Unauthorized');
-    return;
-  }
-
-  // Store admin websocket for broadcasting
-  ws.isAdmin = true;
-  ws.user = user;
-
-  // Send initial state
-  try {
-    const games = await AdminHandler.getActiveGames();
-    ws.send(
-      JSON.stringify({
-        type: 'game_state',
-        games,
-      }),
-    );
-  } catch (error) {
-    console.error('Error sending initial state to admin:', error);
-  }
-});
-
-// Add this to your existing broadcast functions
 // Start server
 server.listen(PORT, () => {
   console.log(`Secure server running on port ${PORT}`);

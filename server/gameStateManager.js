@@ -93,8 +93,10 @@ class GameStateManager {
 
   async getActiveGameId(tableId) {
     // Find the active game for this table
-    return Array.from(this.activeGames.entries())
-      .find(([, game]) => game.tableId === tableId)[0] || null;
+    const activeGameEntry = Array.from(this.activeGames.entries())
+        .find(([, game]) => game.tableId === tableId);
+    
+    return activeGameEntry ? activeGameEntry[0] : null;
   }
 
   async addPlayerToTable(tableId, userId, position) {
@@ -443,46 +445,47 @@ class GameStateManager {
   async completeGame(gameId, results) {
     const conn = await pool.getConnection();
     try {
-      await conn.beginTransaction();
+        await conn.beginTransaction();
 
-      // Prepare bulk insert for game results
-      if (results.length > 0) {
-        // Create the bulk insert query
-        const placeholders = results.map(() => '(?, ?, ?, ?, ?)').join(', ');
-        const query = `INSERT INTO game_results 
+        // Prepare bulk insert for game results
+        if (results.length > 0) {
+            // Create the bulk insert query
+            const placeholders = results.map(() => '(?, ?, ?, ?, ?)').join(', ');
+            const query = `INSERT INTO game_results 
                 (id, game_id, player_hand_id, outcome, payout_amount) 
                 VALUES ${placeholders}`;
 
-        // Prepare values for bulk insert
-        const values = results.flatMap((result) => [
-          uuidv4(),
-          gameId,
-          result.handId,
-          result.outcome,
-          result.payout,
-        ]);
+            // Prepare values for bulk insert
+            const values = results.flatMap(result => [
+                uuidv4(),
+                gameId,
+                result.handId,
+                result.outcome,
+                result.payout
+            ]);
 
-        // Execute bulk insert
-        await conn.execute(query, values);
-      }
+            // Execute bulk insert
+            await conn.execute(query, values);
+        }
 
-      // Update game status
-      await conn.execute(
-        'UPDATE games SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?',
-        ['completed', gameId],
-      );
+        // Update game status
+        await conn.execute(
+            'UPDATE games SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+            ['completed', gameId]
+        );
 
-      await conn.commit();
+        await conn.commit();
 
-      // Clean up in-memory state
-      this.activeGames.delete(gameId);
+        // Clean up in-memory state
+        this.activeGames.delete(gameId);
+
     } catch (error) {
-      await conn.rollback();
-      throw error;
+        await conn.rollback();
+        throw error;
     } finally {
-      conn.release();
+        conn.release();
     }
-  }
+}
 
   // Helper methods for handling specific actions
   async handleHit(conn, gameId, playerPositionId, card) {
