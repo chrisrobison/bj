@@ -142,6 +142,10 @@ class GameUI {
                 </div>`;
             dealerCards.appendChild(cardEl);
         });
+        const holeCard = document.createElement('div');
+        holeCard.className = 'card';
+        holeCard.innerHTML = `<div class="card-inner flip"><div class='card-front'></div><div class='card-back'></div></div>`; 
+        dealerCards.appendChild(holeCard);
     }
 
     updatePlayerCards(players) {
@@ -163,22 +167,34 @@ class GameUI {
                 } else {
                     playerEl.classList.remove('active');
                 }
-
+    
                 const cardsEl = playerEl.querySelector('.cards');
-                if (cardsEl && player.hands && player.hands[player.currentHand]) {
+                if (cardsEl && player.hands) {
+                    // Ensure hands is an array and has at least one hand
+                    const currentHand = Array.isArray(player.hands) ? 
+                        player.hands[player.currentHand || 0] : 
+                        (Array.isArray(player.hands[player.currentHand]) ? 
+                            player.hands[player.currentHand] : []);
+                    
+                    console.log('Rendering hand:', currentHand);
                     cardsEl.innerHTML = '';
-                    player.hands[player.currentHand].forEach(card => {
-                        const cardEl = document.createElement('div');
-                        cardEl.className = `card card-${card.value}${card.suit}`;
-                        cardEl.innerHTML = `
-                            <div class="card-inner">
-                                <div class="card-front"></div>
-                                <div class="card-back"></div>
-                            </div>`;
-                        cardsEl.appendChild(cardEl);
-                    });
+                    
+                    if (currentHand && currentHand.length > 0) {
+                        currentHand.forEach(card => {
+                            console.log('Rendering card:', card);
+                            const cardEl = document.createElement('div');
+                            cardEl.className = `card card-${card.value}${card.suit}`;
+                            cardEl.innerHTML = `
+                                <div class="card-inner">
+                                    <div class="card-front"></div>
+                                    <div class="card-back"></div>
+                                </div>`;
+                            cardsEl.appendChild(cardEl);
+                        });
+                    }
                 }
-
+    
+                // Update bet amount
                 const betEl = playerEl.querySelector('.bet span');
                 if (betEl) {
                     betEl.textContent = player.bet || '0';
