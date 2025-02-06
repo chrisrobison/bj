@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lobby - Blackjack</title>
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        /* Header styles */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #4CAF50;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Table grid */
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .table-card {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .table-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .table-card.full {
+            opacity: 0.7;
+        }
+
+        .table-card h3 {
+            color: #4CAF50;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .table-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            background-color: #333;
+            border-radius: 4px;
+        }
+
+        .info-label {
+            color: #888;
+        }
+
+        .info-value {
+            font-weight: bold;
+        }
+
+        .seats {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .seat {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #4CAF50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .seat.occupied {
+            background-color: #4CAF50;
+        }
+
+        .table-actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .btn-primary:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #666;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #777;
+        }
+
+        /* Rules section */
+        .rules-section {
+            margin-top: 3rem;
+            padding: 2rem;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+        }
+
+        .rules-section h2 {
+            color: #4CAF50;
+            margin-bottom: 1rem;
+        }
+
+        .rules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .rule-card {
+            background-color: #333;
+            padding: 1rem;
+            border-radius: 4px;
+        }
+
+        .rule-card h3 {
+            color: #4CAF50;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: #888;
+        }
+
+        /* Error state */
+        .error {
+            background-color: #ff44444d;
+            color: #ff4444;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Blackjack Tables</h1>
+        <p>Select a table to join the game</p>
+    </div>
+
+    <div id="error" class="error"></div>
+    
+    <div id="loading" class="loading">Loading tables...</div>
+
+    <div id="tables" class="tables-grid"></div>
+
+    <div class="rules-section">
+        <h2>House Rules</h2>
+        <div class="rules-grid">
+            <div class="rule-card">
+                <h3>Blackjack Payout</h3>
+                <p>3:2 on natural blackjacks</p>
+            </div>
+            <div class="rule-card">
+                <h3>Dealer Rules</h3>
+                <p>Dealer must hit on soft 17</p>
+            </div>
+            <div class="rule-card">
+                <h3>Double Down</h3>
+                <p>Allowed on any two cards</p>
+            </div>
+            <div class="rule-card">
+                <h3>Splitting</h3>
+                <p>Split up to 3 times (4 hands)</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tablesContainer = document.getElementById('tables');
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            
+            async function fetchTables() {
+                try {
+                    const token = localStorage.getItem('jwt_token');
+                    if (!token) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+
+                    const response = await fetch('https://cdr2.com:4444/api/tables', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch tables');
+                    }
+
+                    const tables = await response.json();
+                    renderTables(tables);
+                } catch (error) {
+                    showError(error.message);
+                } finally {
+                    loadingElement.style.display = 'none';
+                }
+            }
+
+            function renderTables(tables) {
+                tablesContainer.innerHTML = '';
+                
+                tables.forEach(table => {
+                    const isFull = table.players >= table.config.maxPlayers;
+                    const tableCard = document.createElement('div');
+                    tableCard.className = `table-card ${isFull ? 'full' : ''}`;
+                    
+                    tableCard.innerHTML = `
+                        <h3>Table ${table.id}</h3>
+                        <div class="table-info">
+                            <div class="info-row">
+                                <span class="info-label">Minimum Bet</span>
+                                <span class="info-value">$${table.config.minBet}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Maximum Bet</span>
+                                <span class="info-value">$${table.config.maxBet}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Decks</span>
+                                <span class="info-value">${table.config.decks}</span>
+                            </div>
+                        </div>
+                        <div class="seats">
+                            ${generateSeats(table.players, table.config.maxPlayers)}
+                        </div>
+                        <div class="table-actions">
+                            <button class="btn btn-primary" 
+                                    onclick="joinTable('${table.id}')"
+                                    ${isFull ? 'disabled' : ''}>
+                                ${isFull ? 'Table Full' : 'Join Table'}
+                            </button>
+                            <button class="btn btn-secondary" onclick="watchTable('${table.id}')">
+                                Watch
+                            </button>
+                        </div>
+                    `;
+                    
+                    tablesContainer.appendChild(tableCard);
+                });
+            }
+
+            function generateSeats(occupiedSeats, maxSeats) {
+                let seats = '';
+                for (let i = 0; i < maxSeats; i++) {
+                    seats += `<div class="seat ${i < occupiedSeats ? 'occupied' : ''}"></div>`;
+                }
+                return seats;
+            }
+
+            function showError(message) {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            }
+
+            // Initialize by fetching tables
+            fetchTables();
+
+            // Refresh tables every 30 seconds
+            setInterval(fetchTables, 30000);
+
+            // Add to global scope for button clicks
+            window.joinTable = function(tableId) {
+                window.location.href = `/game.html?table=${tableId}`;
+            };
+
+            window.watchTable = function(tableId) {
+                window.location.href = `/game.html?table=${tableId}&mode=spectate`;
+            };
+        });
+    </script>
+</body>
+</html>
