@@ -3,9 +3,13 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-plusplus */
 // server/gameStateManager.js
-const { v4: uuidv4 } = require('uuid');
+const {
+  v4: uuidv4
+} = require('uuid');
 const pool = require('./db');
-const { BlackjackTable } = require('./blackjackTable');
+const {
+  BlackjackTable
+} = require('./blackjackTable');
 
 class GameStateManager {
   constructor() {
@@ -73,7 +77,9 @@ class GameStateManager {
 
     // Hide dealer's hole card during play if necessary
     if (playerView.gamePhase === 'playing' && playerView.dealer.cards.length > 1) {
-      playerView.dealer.cards[1] = { hidden: true };
+      playerView.dealer.cards[1] = {
+        hidden: true
+      };
     }
 
     // Only send the face-up card during betting/playing phases
@@ -94,8 +100,8 @@ class GameStateManager {
   async getActiveGameId(tableId) {
     // Find the active game for this table
     const activeGameEntry = Array.from(this.activeGames.entries())
-        .find(([, game]) => game.tableId === tableId);
-    
+      .find(([, game]) => game.tableId === tableId);
+
     return activeGameEntry ? activeGameEntry[0] : null;
   }
 
@@ -122,59 +128,61 @@ class GameStateManager {
     }
   }
 
-  // In gameStateManager.js
+
   async startNewGame(tableId) {
+    // Only create new game if one doesn't exist
+    const [existingGames] = await pool.execute(
+      'SELECT id FROM games WHERE table_id = ? AND status = ?',
+      [tableId, 'active']
+    );
+
+    if (existingGames.length > 0) {
+      console.log('Active game already exists:', existingGames[0].id);
+      return existingGames[0].id;
+    }
+
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
-      // Generate game ID
       const gameId = uuidv4();
 
       // Create new game
       await conn.execute(
         'INSERT INTO games (id, table_id, game_phase) VALUES (?, ?, ?)',
-        [gameId, tableId, 'betting'],
+        [gameId, tableId, 'betting']
       );
 
-      // Get all active positions in one query
+      // Get all active positions
       const [positions] = await conn.execute(
         'SELECT * FROM player_positions WHERE table_id = ? AND status = ?',
-        [tableId, 'active'],
+        [tableId, 'active']
       );
 
-      // Prepare all hand insertions at once
       if (positions.length > 0) {
-        // Create the bulk insert query
-        const insertValues = positions.map((position) => [gameId, position.id, '[]', 0, 'betting']);
+        const insertValues = positions.map(position => [
+          gameId,
+          position.id,
+          '[]',
+          0,
+          'betting'
+        ]);
 
-        // Build the bulk insert query
-        const placeholders = positions.map(() => '(?, ?, ?, ?, ?)').join(', ');
-        const query = `INSERT INTO player_hands 
-                (game_id, player_position_id, cards, bet_amount, status) 
-                VALUES ${placeholders}`;
-
-        // Flatten the array of values for the bulk insert
-        const flatValues = insertValues.flat();
-
-        // Execute bulk insert
-        await conn.execute(query, flatValues);
+        const placeholders = positions.map(() => '(?, ?, ?, ?, ?)').join(',');
+        await conn.execute(
+          `INSERT INTO player_hands 
+                    (game_id, player_position_id, cards, bet_amount, status)
+                VALUES ${placeholders}`,
+          insertValues.flat()
+        );
       }
 
       await conn.commit();
-
-      // Update in-memory state
-      const game = {
-        id: gameId,
-        tableId,
-        phase: 'betting',
-        playerHands: new Map(),
-        dealerCards: [],
-      };
-      this.activeGames.set(gameId, game);
-
+      console.log('New game created successfully:', gameId);
       return gameId;
+
     } catch (error) {
+      console.error('Error creating new game:', error);
       await conn.rollback();
       throw error;
     } finally {
@@ -445,47 +453,47 @@ class GameStateManager {
   async completeGame(gameId, results) {
     const conn = await pool.getConnection();
     try {
-        await conn.beginTransaction();
+      await conn.beginTransaction();
 
-        // Prepare bulk insert for game results
-        if (results.length > 0) {
-            // Create the bulk insert query
-            const placeholders = results.map(() => '(?, ?, ?, ?, ?)').join(', ');
-            const query = `INSERT INTO game_results 
+      // Prepare bulk insert for game results
+      if (results.length > 0) {
+        // Create the bulk insert query
+        const placeholders = results.map(() => '(?, ?, ?, ?, ?)').join(', ');
+        const query = `INSERT INTO game_results 
                 (id, game_id, player_hand_id, outcome, payout_amount) 
                 VALUES ${placeholders}`;
 
-            // Prepare values for bulk insert
-            const values = results.flatMap(result => [
-                uuidv4(),
-                gameId,
-                result.handId,
-                result.outcome,
-                result.payout
-            ]);
+        // Prepare values for bulk insert
+        const values = results.flatMap(result => [
+          uuidv4(),
+          gameId,
+          result.handId,
+          result.outcome,
+          result.payout
+        ]);
 
-            // Execute bulk insert
-            await conn.execute(query, values);
-        }
+        // Execute bulk insert
+        await conn.execute(query, values);
+      }
 
-        // Update game status
-        await conn.execute(
-            'UPDATE games SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?',
-            ['completed', gameId]
-        );
+      // Update game status
+      await conn.execute(
+        'UPDATE games SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?',
+        ['completed', gameId]
+      );
 
-        await conn.commit();
+      await conn.commit();
 
-        // Clean up in-memory state
-        this.activeGames.delete(gameId);
+      // Clean up in-memory state
+      this.activeGames.delete(gameId);
 
     } catch (error) {
-        await conn.rollback();
-        throw error;
+      await conn.rollback();
+      throw error;
     } finally {
-        conn.release();
+      conn.release();
     }
-}
+  }
 
   // Helper methods for handling specific actions
   async handleHit(conn, gameId, playerPositionId, card) {
@@ -553,4 +561,6 @@ class GameStateManager {
   }
 }
 
-module.exports = { GameStateManager };
+module.exports = {
+  GameStateManager
+};
