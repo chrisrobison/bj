@@ -237,32 +237,69 @@
             const loadingElement = document.getElementById('loading');
             const errorElement = document.getElementById('error');
             
-            async function fetchTables() {
-                try {
-                    const token = localStorage.getItem('jwt_token');
-                    if (!token) {
-                        window.location.href = '/login.html';
-                        return;
-                    }
+// Update the fetchTables function in lobby.html
+    async function fetchTables() {
+        try {
+            const token = localStorage.getItem('jwt_token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
 
-                    const response = await fetch('https://cdr2.com:4444/api/tables', {
+            // Update URL to include protocol and port
+            const response = await fetch(`https://${window.location.hostname}:4444/api/tables`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch tables');
+            }
+
+            const tables = await response.json();
+            
+            // If no tables exist, create a default table
+            if (tables.length === 0) {
+                const defaultConfig = {
+                    decks: 6,
+                    continuousShuffle: true,
+                    maxPlayers: 5,
+                    minBet: 1,
+                    maxBet: 500,
+                    doubleDown: 'any',
+                    doubleAfterSplit: true,
+                    dealerHitSoft17: true
+                };
+
+                const createResponse = await fetch(`https://${window.location.hostname}:4444/api/tables`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(defaultConfig)
+                });
+
+                if (createResponse.ok) {
+                    // Fetch tables again after creating one
+                    const newResponse = await fetch(`https://${window.location.hostname}:4444/api/tables`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
                     });
-
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch tables');
-                    }
-
-                    const tables = await response.json();
-                    renderTables(tables);
-                } catch (error) {
-                    showError(error.message);
-                } finally {
-                    loadingElement.style.display = 'none';
+                    const newTables = await newResponse.json();
+                    renderTables(newTables);
                 }
+            } else {
+                renderTables(tables);
             }
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            loadingElement.style.display = 'none';
+        }
+    }
 
             function renderTables(tables) {
                 tablesContainer.innerHTML = '';
