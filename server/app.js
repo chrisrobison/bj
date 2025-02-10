@@ -599,6 +599,63 @@ app.post('/api/admin/tables', adminAuthMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/tables', authMiddleware, async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        // First check for any active tables
+        const [tables] = await conn.execute(
+            'SELECT * FROM tables WHERE status = ?',
+            ['active']
+        );
+
+        if (tables.length === 0) {
+            // No active tables - create default table
+            const defaultConfig = {
+                decks: 6,
+                continuousShuffle: true,
+                maxPlayers: 5,
+                minBet: 1,
+                maxBet: 500,
+                doubleDown: 'any',
+                doubleAfterSplit: true,
+                dealerHitSoft17: true
+            };
+
+            // Create new table
+            const [result] = await conn.execute(
+                'INSERT INTO tables (id, config, status) VALUES (?, ?, ?)',
+                [uuidv4(), JSON.stringify(defaultConfig), 'active']
+            );
+
+            // Fetch the newly created table
+            const [newTables] = await conn.execute(
+                'SELECT * FROM tables WHERE status = ?',
+                ['active']
+            );
+
+            return res.json(newTables.map(table => ({
+                id: table.id,
+                players: 0, // New table has no players
+                config: JSON.parse(table.config),
+                gamePhase: null
+            })));
+        }
+
+        // Return existing tables
+        return res.json(tables.map(table => ({
+            id: table.id,
+            players: 0, // You might want to count actual players here
+            config: JSON.parse(table.config),
+            gamePhase: null
+        })));
+    } catch (error) {
+        console.error('Error handling tables:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        conn.release();
+    }
+});
+
 app.post(
   '/api/admin/tables/:id/close',
   adminAuthMiddleware,

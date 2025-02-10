@@ -31,9 +31,7 @@ CREATE TABLE `game_results` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `player_hand_id` (`player_hand_id`),
-  KEY `idx_game_results_game` (`game_id`),
-  CONSTRAINT `game_results_ibfk_1` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`),
-  CONSTRAINT `game_results_ibfk_2` FOREIGN KEY (`player_hand_id`) REFERENCES `player_hands` (`id`)
+  KEY `idx_game_results_game` (`game_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -63,8 +61,7 @@ CREATE TABLE `games` (
   `current_player_position` int(11) DEFAULT NULL,
   `status` enum('active','completed','cancelled') DEFAULT 'active',
   PRIMARY KEY (`id`),
-  KEY `idx_games_table_status` (`table_id`,`status`),
-  CONSTRAINT `games_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`)
+  KEY `idx_games_table_status` (`table_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -93,9 +90,7 @@ CREATE TABLE `player_hands` (
   `status` enum('betting','ready','playing','standing','busted') NOT NULL,
   PRIMARY KEY (`id`),
   KEY `game_id` (`game_id`),
-  KEY `player_position_id` (`player_position_id`),
-  CONSTRAINT `player_hands_ibfk_1` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`),
-  CONSTRAINT `player_hands_ibfk_2` FOREIGN KEY (`player_position_id`) REFERENCES `player_positions` (`id`)
+  KEY `player_position_id` (`player_position_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=114 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -124,8 +119,7 @@ CREATE TABLE `player_positions` (
   `status` enum('active','left') DEFAULT 'active',
   PRIMARY KEY (`id`),
   KEY `idx_player_positions_user` (`user_id`,`status`),
-  KEY `idx_player_positions_table` (`table_id`,`status`),
-  CONSTRAINT `player_positions_ibfk_1` FOREIGN KEY (`table_id`) REFERENCES `tables` (`id`)
+  KEY `idx_player_positions_table` (`table_id`,`status`)
 ) ENGINE=InnoDB AUTO_INCREMENT=122 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

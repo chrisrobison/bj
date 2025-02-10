@@ -1,7 +1,12 @@
+import { Card, Deck } from './deck.js';
+
 class GameUI {
     constructor() {
         this.gameWorker = null;
         this.lastGamePhase = null;
+        this.deck = new Deck(6); // Use 6 decks for blackjack
+        this.dealerCards = [];
+        this.playerCards = [];
         this.setupEventListeners();
     }
 
@@ -132,20 +137,19 @@ class GameUI {
         if (!dealerCards) return;
         
         dealerCards.innerHTML = '';
-        dealer.cards.forEach(card => {
-            const cardEl = document.createElement('div');
-            cardEl.className = card.hidden ? 'card' : `card card-${card.value}${card.suit}`;
-            cardEl.innerHTML = `
-                <div class="card-inner ${card.hidden ? 'flip' : ''}">
-                    <div class="card-front"></div>
-                    <div class="card-back"></div>
-                </div>`;
-            dealerCards.appendChild(cardEl);
+        dealer.cards.forEach(async (cardData, i) => {
+            // Create new card instance
+            const card = new Card(cardData.value, cardData.suit);
+            dealerCards.appendChild(card.element);
+
+            // Calculate position
+            const centerX = dealerCards.offsetWidth / 2;
+            const xOffset = (i - (dealer.cards.length - 1) / 2) * 160;
+            const x = centerX + xOffset;
+            
+            // Deal with animation
+            await card.dealTo(x, 0, 0, i * 200, cardData.hidden ? 1 : 0);
         });
-        const holeCard = document.createElement('div');
-        holeCard.className = 'card';
-        holeCard.innerHTML = `<div class="card-inner flip"><div class='card-front'></div><div class='card-back'></div></div>`; 
-        dealerCards.appendChild(holeCard);
     }
 
     updatePlayerCards(players) {
@@ -153,54 +157,110 @@ class GameUI {
         const userData = userStr ? JSON.parse(userStr) : null;
         const ourPlayerId = userData ? userData.id : null;
         
-        console.log('Updating player cards. Our ID:', ourPlayerId);
-        console.log('Available players:', players);
-        
-        players.forEach((player, index) => {
-            console.log(`Processing player ${player.id} at position ${index + 1}`);
+        players.forEach(async (player, index) => {
             const playerEl = document.getElementById(`player${index + 1}`);
-            if (playerEl) {
-                // Mark our player position
-                if (player.id === ourPlayerId) {
-                    console.log(`Found our player at position ${index + 1}`);
-                    playerEl.classList.add('active');
+            if (!playerEl) return;
+
+            // Handle active player highlighting
+            if (player.id === ourPlayerId) {
+                playerEl.classList.add('active');
+            } else {
+                playerEl.classList.remove('active');
+            }
+
+            const cardsEl = playerEl.querySelector('.cards');
+            if (!cardsEl || !player.hands) return;
+
+            // Get current hand
+            const currentHand = Array.isArray(player.hands) ? 
+                player.hands[player.currentHand || 0] : 
+                (Array.isArray(player.hands[player.currentHand]) ? 
+                    player.hands[player.currentHand] : []);
+
+            // Remember existing card count
+            const existingCards = cardsEl.querySelectorAll('.card').length;
+            cardsEl.innerHTML = '';
+
+            // Deal cards
+            currentHand.forEach(async (cardData, i) => {
+                const card = new Card(cardData.value, cardData.suit);
+                cardsEl.appendChild(card.element);
+
+                const centerX = cardsEl.offsetWidth / 2;
+                const xOffset = (i - (currentHand.length - 1) / 2) * 160;
+                const x = centerX + xOffset;
+                const y = 0;
+
+                // Only animate new cards
+                if (i >= existingCards) {
+                    await card.dealTo(x, y, 0, i * 200);
                 } else {
-                    playerEl.classList.remove('active');
+                    card.element.style.transform = `translate(${x}px, ${y}px)`;
                 }
-    
-                const cardsEl = playerEl.querySelector('.cards');
-                if (cardsEl && player.hands) {
-                    // Ensure hands is an array and has at least one hand
-                    const currentHand = Array.isArray(player.hands) ? 
-                        player.hands[player.currentHand || 0] : 
-                        (Array.isArray(player.hands[player.currentHand]) ? 
-                            player.hands[player.currentHand] : []);
-                    
-                    console.log('Rendering hand:', currentHand);
-                    cardsEl.innerHTML = '';
-                    
-                    if (currentHand && currentHand.length > 0) {
-                        currentHand.forEach(card => {
-                            console.log('Rendering card:', card);
-                            const cardEl = document.createElement('div');
-                            cardEl.className = `card card-${card.value}${card.suit}`;
-                            cardEl.innerHTML = `
-                                <div class="card-inner">
-                                    <div class="card-front"></div>
-                                    <div class="card-back"></div>
-                                </div>`;
-                            cardsEl.appendChild(cardEl);
-                        });
-                    }
-                }
-    
-                // Update bet amount
-                const betEl = playerEl.querySelector('.bet span');
-                if (betEl) {
-                    betEl.textContent = player.bet || '0';
-                }
+            });
+
+            // Update bet amount
+            const betEl = playerEl.querySelector('.bet span');
+            if (betEl) {
+                betEl.textContent = player.bet || '0';
             }
         });
+    }
+
+    // Add the new helper method for calculating positions
+    calculateCardPosition(index, totalCards, containerWidth) {
+        const cardWidth = 140; // Card width in pixels
+        const spacing = 20; // Space between cards
+        const totalWidth = (totalCards * cardWidth) + ((totalCards - 1) * spacing);
+        const startX = (containerWidth - totalWidth) / 2;
+        return startX + (index * (cardWidth + spacing));
+    }
+
+    async animateCardToHand(card, position) {
+        const {x, y} = position;
+        await card.dealTo(x, y);
+    }
+
+    // Update the game state update handler to use animations
+    handleStateUpdate(state) {
+        console.log('Game state:', state);
+        
+        if (this.isNewHand(state)) {
+            // Clear existing cards with animation
+            this.clearTableWithAnimation().then(() => {
+                this.updateDealerCards(state.dealer);
+                this.updatePlayerCards(state.players);
+            });
+        } else {
+            // Update without clearing
+            this.updateDealerCards(state.dealer);
+            this.updatePlayerCards(state.players);
+        }
+        
+        this.updateControls(state);
+        this.updateGamePhaseMessage(state);
+    }
+
+    isNewHand(state) {
+        // Determine if this is a new hand starting
+        return state.gamePhase === 'dealing' && 
+               (!this.lastState || this.lastState.gamePhase === 'betting');
+    }
+
+    async clearTableWithAnimation() {
+        const cards = document.querySelectorAll('.card');
+        const animations = Array.from(cards).map(card => {
+            return new Promise(resolve => {
+                card.style.transition = 'all 0.5s ease';
+                card.style.transform = 'translate(-1000px, -200px) rotate(-45deg)';
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.remove();
+                    resolve();
+                }, 500);
+            });
+        });
+        await Promise.all(animations);
     }
 
     updateControls(state) {
@@ -418,3 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const game = new GameUI();
     game.init();
 });
+
+export default GameUI;
+

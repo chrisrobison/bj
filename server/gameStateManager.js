@@ -98,11 +98,31 @@ class GameStateManager {
   }
 
   async getActiveGameId(tableId) {
-    // Find the active game for this table
-    const activeGameEntry = Array.from(this.activeGames.entries())
-      .find(([, game]) => game.tableId === tableId);
+      const conn = await pool.getConnection();
+      try {
+          // Get active game from database
+          const [games] = await conn.execute(
+              'SELECT id FROM games WHERE table_id = ? AND status = ? ORDER BY started_at DESC LIMIT 1',
+              [tableId, 'active']
+          );
 
-    return activeGameEntry ? activeGameEntry[0] : null;
+          if (games.length === 0) {
+              return null;
+          }
+
+          // Store in memory map if not already there
+          const gameId = games[0].id;
+          if (!this.activeGames.has(gameId)) {
+              this.activeGames.set(gameId, {
+                  tableId: tableId,
+                  phase: 'betting'  // default phase
+              });
+          }
+
+          return gameId;
+      } finally {
+          conn.release();
+      }
   }
 
   async addPlayerToTable(tableId, userId, position) {
@@ -128,66 +148,62 @@ class GameStateManager {
     }
   }
 
-
   async startNewGame(tableId) {
-    // Only create new game if one doesn't exist
-    const [existingGames] = await pool.execute(
-      'SELECT id FROM games WHERE table_id = ? AND status = ?',
-      [tableId, 'active']
-    );
+      console.log(`Starting new game for table ${tableId}`);
+      const conn = await pool.getConnection();
+      try {
+          await conn.beginTransaction();
 
-    if (existingGames.length > 0) {
-      console.log('Active game already exists:', existingGames[0].id);
-      return existingGames[0].id;
-    }
+          // Generate new game ID
+          const gameId = uuidv4();
 
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+          // Create new game
+          await conn.execute(
+              'INSERT INTO games (id, table_id, game_phase, status) VALUES (?, ?, ?, ?)',
+              [gameId, tableId, 'betting', 'active']
+          );
 
-      const gameId = uuidv4();
+          // Get all active positions
+          const [positions] = await conn.execute(
+              'SELECT * FROM player_positions WHERE table_id = ? AND status = ?',
+              [tableId, 'active']
+          );
 
-      // Create new game
-      await conn.execute(
-        'INSERT INTO games (id, table_id, game_phase) VALUES (?, ?, ?)',
-        [gameId, tableId, 'betting']
-      );
+          if (positions.length > 0) {
+              const insertValues = positions.map(position => [
+                  gameId,
+                  position.id,
+                  '[]',
+                  0,
+                  'betting'
+              ]);
 
-      // Get all active positions
-      const [positions] = await conn.execute(
-        'SELECT * FROM player_positions WHERE table_id = ? AND status = ?',
-        [tableId, 'active']
-      );
+              const placeholders = positions.map(() => '(?, ?, ?, ?, ?)').join(',');
+              await conn.execute(
+                  `INSERT INTO player_hands 
+                  (game_id, player_position_id, cards, bet_amount, status)
+                  VALUES ${placeholders}`,
+                  insertValues.flat()
+              );
+          }
 
-      if (positions.length > 0) {
-        const insertValues = positions.map(position => [
-          gameId,
-          position.id,
-          '[]',
-          0,
-          'betting'
-        ]);
+          // Store in memory
+          this.activeGames.set(gameId, {
+              tableId: tableId,
+              phase: 'betting'
+          });
 
-        const placeholders = positions.map(() => '(?, ?, ?, ?, ?)').join(',');
-        await conn.execute(
-          `INSERT INTO player_hands 
-                    (game_id, player_position_id, cards, bet_amount, status)
-                VALUES ${placeholders}`,
-          insertValues.flat()
-        );
+          await conn.commit();
+          console.log('New game created successfully:', gameId);
+          return gameId;
+
+      } catch (error) {
+          await conn.rollback();
+          console.error('Error creating new game:', error);
+          throw error;
+      } finally {
+          conn.release();
       }
-
-      await conn.commit();
-      console.log('New game created successfully:', gameId);
-      return gameId;
-
-    } catch (error) {
-      console.error('Error creating new game:', error);
-      await conn.rollback();
-      throw error;
-    } finally {
-      conn.release();
-    }
   }
 
   async updateGamePhase(tableId, phase) {
@@ -199,7 +215,11 @@ class GameStateManager {
       // Get active game
       const gameId = await this.getActiveGameId(tableId);
       if (!gameId) {
-        throw new Error('No active game found');
+          // If no active game, create one
+          gameId = await this.startNewGame(tableId);
+          if (!gameId) {
+              throw new Error('Failed to create new game');
+          }
       }
 
       // Update game phase in database
@@ -213,6 +233,17 @@ class GameStateManager {
       if (table) {
         table.gamePhase = phase;
       }
+
+      // Update activeGames map
+      if (!this.activeGames.has(gameId)) {
+          this.activeGames.set(gameId, {
+              tableId: tableId,
+              phase: phase
+          });
+      } else {
+          this.activeGames.get(gameId).phase = phase;
+      }
+
 
       await conn.commit();
 

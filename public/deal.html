@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Card Dealing Animation Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-table {
+            background-color: #267f00;
+            border-radius: 20px;
+            padding: 20px;
+            position: relative;
+            height: 600px;
+            margin: 20px auto;
+            width: 800px;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.3);
+        }
+
+        .dealer-area, .player-area {
+            position: absolute;
+            width: 100%;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dealer-area {
+            top: 50px;
+        }
+
+        .player-area {
+            bottom: 50px;
+        }
+
+        .area-label {
+            position: absolute;
+            left: 20px;
+            color: rgba(255,255,255,0.8);
+            font-size: 18px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #error-message {
+            color: #ff4444;
+            text-align: center;
+            margin: 10px 0;
+            min-height: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="cards.css">
+</head>
+<body>
+    <div class="game-table">
+        <div class="dealer-area">
+            <span class="area-label">Dealer</span>
+        </div>
+        <div class="player-area">
+            <span class="area-label">Player</span>
+        </div>
+    </div>
+    <div id="error-message"></div>
+    <div class="controls">
+        <button id="dealBtn">Deal New Hand</button>
+        <button id="clearBtn">Clear Table</button>
+        <button id="shuffleBtn">Shuffle Deck</button>
+    </div>
+
+    <script type="module">
+        const errorMessageEl = document.getElementById('error-message');
+        
+        try {
+            const { Card, Deck } = await import('./deck.js');
+            console.log('Successfully imported Card and Deck classes');
+
+            let deck = new Deck();
+            let dealing = false;
+            
+            const dealBtn = document.getElementById('dealBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const shuffleBtn = document.getElementById('shuffleBtn');
+            const gameTable = document.querySelector('.game-table');
+
+            async function dealHand() {
+                if (dealing) return;
+                dealing = true;
+                dealBtn.disabled = true;
+                errorMessageEl.textContent = '';
+
+                try {
+                    // Check if we need to shuffle
+                    if (deck.needsShuffle) {
+                        deck = new Deck();
+                        deck.shuffle();
+                    }
+
+                    console.log('Dealing new hand...');
+                    
+                    // Get table dimensions for positioning
+                    const tableRect = gameTable.getBoundingClientRect();
+                    const centerX = tableRect.width / 2;
+                    
+                    // Calculate card positions
+                    const playerY = tableRect.height - 200;  // 200px from bottom
+                    const dealerY = 100;  // 100px from top
+                    const cardSpacing = 160;  // Space between cards
+                    
+                    // Create card container if it doesn't exist
+                    let cardContainer = gameTable.querySelector('.card-container');
+                    if (!cardContainer) {
+                        cardContainer = document.createElement('div');
+                        cardContainer.className = 'card-container';
+                        cardContainer.style.position = 'relative';
+                        cardContainer.style.width = '100%';
+                        cardContainer.style.height = '100%';
+                        gameTable.appendChild(cardContainer);
+                    }
+                    
+                    // Deal player cards
+                    const playerCard1 = deck.draw();
+                    playerCard1.faceDown = true;  // Start face down
+                    cardContainer.appendChild(playerCard1.element);
+                    await playerCard1.dealTo(centerX - cardSpacing/2, playerY, 0, 0);
+                    console.log('Dealt player card 1');
+
+                    const playerCard2 = deck.draw();
+                    playerCard2.faceDown = true;  // Start face down
+                    cardContainer.appendChild(playerCard2.element);
+                    await playerCard2.dealTo(centerX + cardSpacing/2, playerY, 0, 200);
+                    console.log('Dealt player card 2');
+
+                    // Deal dealer cards
+                    const dealerCard1 = deck.draw();
+                    dealerCard1.faceDown = true;  // Start face down
+                    cardContainer.appendChild(dealerCard1.element);
+                    await dealerCard1.dealTo(centerX - cardSpacing/2, dealerY, 0, 400);
+                    console.log('Dealt dealer card 1');
+
+                    const dealerCard2 = deck.draw();
+                    dealerCard2.faceDown = true;  // Stay face down (hole card)
+                    cardContainer.appendChild(dealerCard2.element);
+                    await dealerCard2.dealTo(centerX + cardSpacing/2, dealerY, 0, 600, 1);
+                    console.log('Dealt dealer card 2');
+                    
+                    console.log('Completed dealing hand');
+
+                } catch (error) {
+                    console.error('Error dealing cards:', error);
+                    errorMessageEl.textContent = 'Error dealing cards: ' + error.message;
+                } finally {
+                    dealing = false;
+                    dealBtn.disabled = false;
+                }
+            }
+
+            function clearTable() {
+                errorMessageEl.textContent = '';
+                const cards = gameTable.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.remove();
+                });
+                dealBtn.disabled = false;
+            }
+
+            function shuffleDeck() {
+                errorMessageEl.textContent = '';
+                deck = new Deck();
+                deck.shuffle();
+                clearTable();
+                console.log('Deck shuffled, remaining cards:', deck.remaining);
+            }
+
+            // Event listeners
+            dealBtn.addEventListener('click', dealHand);
+            clearBtn.addEventListener('click', clearTable);
+            shuffleBtn.addEventListener('click', shuffleDeck);
+
+            // Initial shuffle
+            deck.shuffle();
+            console.log('Initial deck shuffled, ready to deal');
+
+        } catch (error) {
+            console.error('Failed to initialize game:', error);
+            errorMessageEl.textContent = 'Failed to initialize game: ' + error.message;
+            document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+        }
+    </script>
+</body>
+</html>

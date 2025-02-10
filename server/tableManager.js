@@ -78,9 +78,12 @@ class TableManager {
         (p) => p.status === "ready"
       );
 
+      await conn.commit();
+
       if (allPlayersReady) {
         console.log("All players ready, starting new round");
         const newState = await table.startRound();
+        console.log("New game state after starting round:", newState);
 
         // Make sure the state gets broadcast
         if (global.gameStateManager) {
@@ -90,7 +93,6 @@ class TableManager {
         console.log("New game state after starting round:", newState);
       }
 
-      await conn.commit();
       return true;
     } catch (error) {
       await conn.rollback();
