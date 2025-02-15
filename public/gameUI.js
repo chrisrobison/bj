@@ -133,22 +133,22 @@ class GameUI {
     }
 
     updateDealerCards(dealer) {
-        const dealerCards = document.querySelector('#dealer .cards');
-        if (!dealerCards) return;
+        const dealerCardContainer = document.querySelector('#dealer .cards');
+        if (!dealerCardContainer) return;
         
-        dealerCards.innerHTML = '';
+        dealerCardContainer.innerHTML = '';
         dealer.cards.forEach(async (cardData, i) => {
             // Create new card instance
             const card = new Card(cardData.value, cardData.suit);
-            dealerCards.appendChild(card.element);
+            dealerCardContainer.appendChild(card.element);
 
             // Calculate position
-            const centerX = dealerCards.offsetWidth / 2;
+            const centerX = dealerCardContainer.offsetWidth / 2;
             const xOffset = (i - (dealer.cards.length - 1) / 2) * 160;
             const x = centerX + xOffset;
             
             // Deal with animation
-            await card.dealTo(x, 0, 0, i * 200, cardData.hidden ? 1 : 0);
+            await card.dealTo(x, 0, 0, i * 75, cardData.hidden ? 1 : 0);
         });
     }
 
@@ -187,7 +187,7 @@ class GameUI {
                 cardsEl.appendChild(card.element);
 
                 const centerX = cardsEl.offsetWidth / 2;
-                const xOffset = (i - (currentHand.length - 1) / 2) * 160;
+                const xOffset = (i - (currentHand.length - 1) / 2) * 75;
                 const x = centerX + xOffset;
                 const y = 0;
 
